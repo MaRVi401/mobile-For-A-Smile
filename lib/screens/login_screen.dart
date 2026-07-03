@@ -65,40 +65,76 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login Donasi Online')),
+      appBar: AppBar(title: const Text('Login For A Smile')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: _login, child: const Text('Login')),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RegisterScreen()),
+        child: SingleChildScrollView(
+          // Tambahkan ini agar layar bisa di-scroll jika keyboard muncul
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+
+              // --- BERIKUT KODE UNTUK MENAMPILKAN LOGO ---
+              Image.asset(
+                'assets/images/fas-logo.png', // Logo
+                height: 120, // Atur tinggi logo dalam pixel
+                fit: BoxFit.contain,
               ),
-              child: const Text('Belum punya akun? Daftar disini'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ForgotPasswordScreen(),
+
+              // -------------------------------------------
+              const SizedBox(height: 30), // Jarak antara logo dan input email
+
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border:
+                      OutlineInputBorder(), // Membuat tampilan input kotak biar rapi
                 ),
               ),
-              child: const Text('Lupa Password?'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: _login,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(
+                    50,
+                  ), // Membuat tombol melebar penuh
+                ),
+                child: const Text('Login'),
+              ),
+
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisterScreen(),
+                  ),
+                ),
+                child: const Text('Belum punya akun? Daftar disini'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ForgotPasswordScreen(),
+                  ),
+                ),
+                child: const Text('Lupa Password?'),
+              ),
+            ],
+          ),
         ),
       ),
     );

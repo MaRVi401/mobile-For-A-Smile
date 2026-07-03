@@ -34,7 +34,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Donasi Online'),
+        title: const Text('Dashboard For A Smile'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
