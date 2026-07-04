@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../network/api_client.dart';
 import '../utils/formatter.dart';
+import 'payment_web_view_screen.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final int campaignId;
@@ -124,15 +125,25 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 201 && response.data['success'] == true) {
-        String redirectUrl = response.data['redirect_url'];
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaksi Berhasil Dibuat. Silakan bayar di: $redirectUrl',
+        // Ambil string url pembayaran dari response Laravel Anda
+        final String redirectUrl =
+            response.data['redirect_url'] ?? response.data['snap_url'] ?? '';
+
+        if (redirectUrl.isNotEmpty) {
+          // FIX UTAMA: Panggil PaymentWebViewScreen dengan melemparkan parameter 'url' saja
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentWebViewScreen(url: redirectUrl),
             ),
-            duration: const Duration(seconds: 5),
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal mendapatkan link pembayaran dari server.'),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint("Error processing donation: $e");
