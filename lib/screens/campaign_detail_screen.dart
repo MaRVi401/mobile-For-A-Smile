@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../network/api_client.dart';
 import '../utils/formatter.dart';
 import 'payment_web_view_screen.dart';
+import 'package:flutter/services.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final int campaignId;
@@ -43,71 +44,115 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
   void _openDonationDialog() {
     final TextEditingController amountController = TextEditingController();
-    showModalBottomSheet(
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 20,
-          right: 20,
-          top: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Masukkan Nominal Donasi',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                prefixText: 'Rp ',
-                prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                hintText: 'Minimal 10.000',
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Masukkan Nominal Donasi',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                // Menggunakan Formatter bawaan Flutter untuk membatasi hanya angka
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) {
+                  if (value.isEmpty) return;
+
+                  // Bersihkan karakter non-angka terlebih dahulu
+                  String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+                  int? parsed = int.tryParse(cleaned);
+
+                  if (parsed != null) {
+                    // Menggunakan CurrencyFormatter bawaan utils/formatter.dart kamu
+                    // Kita hilangkan simbol "Rp" dan spasi-nya agar hanya menyisakan format titik saja (10.000)
+                    String formatted = CurrencyFormatter.toRupiah(
+                      parsed,
+                    ).replaceAll('Rp', '').replaceAll(' ', '').trim();
+
+                    // Set ulang teks secara real-time tanpa merusak posisi kursor ketikan
+                    amountController.value = TextEditingValue(
+                      text: formatted,
+                      selection: TextSelection.collapsed(
+                        offset: formatted.length,
+                      ),
+                    );
+                  }
+                },
+                decoration: InputDecoration(
+                  prefixText: 'Rp ',
+                  prefixStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _processDonation(amountController.text);
-                },
-                child: const Text(
-                  'Lanjutkan Pembayaran',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  hintText: '10.000',
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    onPressed: () {
+                      final String rawText = amountController.text;
+                      Navigator.pop(context);
+                      _processDonation(rawText);
+                    },
+                    child: const Text(
+                      'Lanjutkan',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   void _processDonation(String amountStr) async {
-    int? amount = int.tryParse(amountStr);
+    // Bersihkan semua karakter titik (.) dari string rupiah sebelum dikirim ke API Laravel
+    String cleanedAmount = amountStr.replaceAll('.', '');
+    int? amount = int.tryParse(cleanedAmount);
+
     if (amount == null || amount < 10000) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,12 +170,10 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 201 && response.data['success'] == true) {
-        // Ambil string url pembayaran dari response Laravel Anda
         final String redirectUrl =
             response.data['redirect_url'] ?? response.data['snap_url'] ?? '';
 
         if (redirectUrl.isNotEmpty) {
-          // FIX UTAMA: Panggil PaymentWebViewScreen dengan melemparkan parameter 'url' saja
           Navigator.push(
             context,
             MaterialPageRoute(
