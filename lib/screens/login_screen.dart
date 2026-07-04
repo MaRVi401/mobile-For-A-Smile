@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_endpoints.dart';
-import 'dashboard_screen.dart';
+import 'main_navigation.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       }
     } on DioException catch (e) {
