@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../network/api_client.dart';
+import '../utils/formatter.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final int campaignId;
@@ -39,18 +40,20 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     }
   }
 
-  // Fungsi aksi tombol donasi (Store/Checkout ke Midtrans)
   void _openDonationDialog() {
     final TextEditingController amountController = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
+          left: 20,
+          right: 20,
+          top: 20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -60,32 +63,42 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
               'Masukkan Nominal Donasi',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixText: 'Rp ',
-                border: OutlineInputBorder(),
+                prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 hintText: 'Minimal 10.000',
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.pop(context);
                   _processDonation(amountController.text);
                 },
-                child: const Text('Lanjutkan Pembayaran'),
+                child: const Text(
+                  'Lanjutkan Pembayaran',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -95,7 +108,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   void _processDonation(String amountStr) async {
     int? amount = int.tryParse(amountStr);
     if (amount == null || amount < 10000) {
-      if (!mounted) return; // Guard check
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Nominal donasi minimal Rp 10.000')),
       );
@@ -108,7 +121,6 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
         data: {'campaign_id': widget.campaignId, 'amount': amount},
       );
 
-      // Validasi penanganan BuildContext melintasi celah async gap
       if (!mounted) return;
 
       if (response.statusCode == 201 && response.data['success'] == true) {
@@ -116,18 +128,24 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Token Transaksi Berhasil Dibuat. Buka link: $redirectUrl',
+              'Transaksi Berhasil Dibuat. Silakan bayar di: $redirectUrl',
             ),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
     } catch (e) {
       debugPrint("Error processing donation: $e");
-      if (!mounted) return; // Validasi celah async gap pada block catch
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Gagal membuat transaksi donasi')),
       );
     }
+  }
+
+  num _safeParse(dynamic value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '0') ?? 0;
   }
 
   @override
@@ -148,41 +166,45 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     final List<dynamic> distributions =
         _detailData!['distribution_history'] ?? [];
 
+    final String? imageUrl = campaign['image_url'];
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(title: Text(campaign['title'] ?? 'Detail Campaign')),
+        appBar: AppBar(
+          title: Text(
+            campaign['title'] ?? 'Detail Campaign',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
         body: Column(
           children: [
-            // Gambar Utama Campaign
-            campaign['image_url'] != null
+            // Gambar Utama Campaign dengan Fitur Fallback Asset Image
+            imageUrl != null && imageUrl.isNotEmpty
                 ? Image.network(
-                    campaign['image_url'],
+                    imageUrl,
                     height: 200,
                     width: double.infinity,
-                    fit: BoxFit
-                        .cover, // FIX: Menggunakan BoxFit.cover, bukan 'Cover'
-                    errorBuilder: (context, error, stackTrace) => Container(
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                      'assets/images/fas-logo.png',
                       height: 200,
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.broken_image,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
+                      width: double.infinity,
+                      fit: BoxFit.contain,
                     ),
                   )
-                : Container(
+                : Image.asset(
+                    'assets/images/fas-logo.png',
                     height: 200,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.image, size: 50),
+                    width: double.infinity,
+                    fit: BoxFit.contain,
                   ),
 
-            // TabBar untuk memisah konten
             const TabBar(
               labelColor: Colors.blue,
               unselectedLabelColor: Colors.grey,
               indicatorColor: Colors.blue,
+              labelStyle: TextStyle(fontWeight: FontWeight.bold),
               tabs: [
                 Tab(text: 'Deskripsi'),
                 Tab(text: 'Program Kerja'),
@@ -190,11 +212,10 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
               ],
             ),
 
-            // TabBarView Konten Utama
             Expanded(
               child: TabBarView(
                 children: [
-                  // Tab 1: Deskripsi & Cerita
+                  // Tab 1: Deskripsi
                   SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -203,29 +224,34 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                         Text(
                           campaign['title'] ?? '',
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Target Penggalangan: Rp ${campaign['target_amount']}',
+                          'Target Dana: ${CurrencyFormatter.toRupiah(_safeParse(campaign['target_amount']))}',
                           style: const TextStyle(
                             color: Colors.blue,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
                           ),
                         ),
                         const Divider(height: 24),
                         Text(
                           campaign['description'] ??
                               'Tidak ada deskripsi cerita.',
-                          style: const TextStyle(fontSize: 15, height: 1.5),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.6,
+                            color: Colors.black87,
+                          ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Tab 2: List Program Kerja
+                  // Tab 2: Program Kerja
                   programs.isEmpty
                       ? const Center(
                           child: Text('Belum ada sub-program kerja.'),
@@ -236,31 +262,49 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                           itemBuilder: (context, index) {
                             final prog = programs[index];
                             return Card(
-                              margin: const EdgeInsets.only(
-                                bottom: 12.0,
-                              ), // FIX: Menggunakan EdgeInsets.only
+                              margin: const EdgeInsets.only(bottom: 12.0),
+                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               child: ListTile(
-                                leading: prog['image_url'] != null
-                                    ? Image.network(
-                                        prog['image_url'],
-                                        width: 50,
-                                        height: 50,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : const Icon(Icons.assignment),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child:
+                                      prog['image_url'] != null &&
+                                          prog['image_url']
+                                              .toString()
+                                              .isNotEmpty
+                                      ? Image.network(
+                                          prog['image_url'],
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          width: 50,
+                                          height: 50,
+                                          color: Colors.grey.shade200,
+                                          child: const Icon(Icons.assignment),
+                                        ),
+                                ),
                                 title: Text(
                                   prog['program_name'] ?? '',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                subtitle: Text(prog['description'] ?? ''),
+                                subtitle: Text(
+                                  prog['description'] ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             );
                           },
                         ),
 
-                  // Tab 3: Transparansi Laporan Dana & Penyaluran
+                  // Tab 3: Transparansi Laporan Dana
                   SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -273,23 +317,47 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        _buildReportRow(
-                          'Total Terkumpul',
-                          'Rp ${report['total_collected']}',
-                          Colors.green,
+                        const SizedBox(height: 10),
+                        Card(
+                          color: Colors.grey.shade50,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14.0),
+                            child: Column(
+                              children: [
+                                _buildReportRow(
+                                  'Total Terkumpul',
+                                  CurrencyFormatter.toRupiah(
+                                    _safeParse(report['total_collected']),
+                                  ),
+                                  Colors.green,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildReportRow(
+                                  'Total Disalurkan',
+                                  CurrencyFormatter.toRupiah(
+                                    _safeParse(report['total_distributed']),
+                                  ),
+                                  Colors.orange.shade800,
+                                ),
+                                const Divider(height: 20),
+                                _buildReportRow(
+                                  'Sisa Saldo Kas',
+                                  CurrencyFormatter.toRupiah(
+                                    _safeParse(report['remaining_balance']),
+                                  ),
+                                  Colors.blue,
+                                  isBold: true,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        _buildReportRow(
-                          'Total Disalurkan',
-                          'Rp ${report['total_distributed']}',
-                          Colors.orange,
-                        ),
-                        _buildReportRow(
-                          'Sisa Saldo Kas',
-                          'Rp ${report['remaining_balance']}',
-                          Colors.blue,
-                        ),
-                        const Divider(height: 32),
+                        const SizedBox(height: 24),
                         const Text(
                           'Riwayat Penyaluran Donasi',
                           style: TextStyle(
@@ -297,7 +365,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         distributions.isEmpty
                             ? const Text(
                                 'Belum ada riwayat distribusi dana.',
@@ -310,25 +378,35 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                                 itemBuilder: (context, index) {
                                   final dist = distributions[index];
                                   return Card(
-                                    color: Colors.grey.shade50,
-                                    margin: const EdgeInsets.only(
-                                      bottom: 8.0,
-                                    ), // FIX: Menggunakan EdgeInsets.only
+                                    color: Colors.white,
+                                    margin: const EdgeInsets.only(bottom: 10.0),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(
+                                        color: Colors.grey.shade100,
+                                      ),
+                                    ),
                                     child: ListTile(
                                       title: Text(
-                                        'Disalurkan: Rp ${dist['amount_distributed']}',
-                                        style: const TextStyle(
+                                        'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.orange,
+                                          color: Colors.orange.shade800,
                                         ),
                                       ),
-                                      subtitle: Text(
-                                        'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                        ),
+                                        child: Text(
+                                          'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
+                                          style: const TextStyle(height: 1.3),
+                                        ),
                                       ),
                                       trailing: Text(
                                         dist['date'] ?? '',
                                         style: const TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           color: Colors.grey,
                                         ),
                                       ),
@@ -345,15 +423,16 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
           ],
         ),
         bottomNavigationBar: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
+              minimumSize: const Size(double.infinity, 52),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 1,
             ),
             icon: const Icon(Icons.volunteer_activism),
             label: const Text(
@@ -367,23 +446,31 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     );
   }
 
-  Widget _buildReportRow(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+  Widget _buildReportRow(
+    String label,
+    String value,
+    Color color, {
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
-        ],
-      ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

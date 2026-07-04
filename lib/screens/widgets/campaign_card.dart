@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/formatter.dart';
 import '../campaign_detail_screen.dart';
 import '../campaign_report_screen.dart';
 
@@ -11,9 +12,62 @@ class CampaignCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final int campaignId = campaign['id'] ?? 0;
     final String title = campaign['title'] ?? 'Tanpa Judul';
-    final String? imageUrl = campaign['image_url'];
+    String? imageUrl = campaign['image_url'];
 
-    // Amankan parsing tipe data JSON dari Laravel
+    // --- PENANGANAN CACHE & FIX URL GAMBAR ---
+    Widget imageWidget;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      // Jika Anda menggunakan emulator Android, konversi 'localhost' dari Laravel ke IP gateway '10.0.2.2'
+      if (imageUrl.contains('localhost')) {
+        imageUrl = imageUrl.replaceAll('localhost', '10.0.2.2');
+      }
+
+      try {
+        // Menambahkan unique timestamp menggunakan Uri agar struktur URL tidak rusak/pecah
+        final Uri originalUri = Uri.parse(imageUrl);
+        final Uri optimizedUri = originalUri.replace(
+          queryParameters: {
+            ...originalUri.queryParameters,
+            't': DateTime.now().millisecondsSinceEpoch.toString(),
+          },
+        );
+
+        imageWidget = Image.network(
+          optimizedUri.toString(),
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint("Image network error: $error");
+            return Image.asset(
+              'assets/images/fas-logo.png',
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.contain,
+            );
+          },
+        );
+      } catch (e) {
+        // Jika Uri.parse gagal karena format string URL tidak valid
+        imageWidget = Image.asset(
+          'assets/images/fas-logo.png',
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.contain,
+        );
+      }
+    } else {
+      // Jika memang image_url dari API Laravel bernilai null
+      imageWidget = Image.asset(
+        'assets/images/fas-logo.png',
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.contain,
+      );
+    }
+
+    // --- AMANKAN PARSING TIPE DATA ---
     final num targetAmount = campaign['target_amount'] is num
         ? campaign['target_amount']
         : (num.tryParse(campaign['target_amount']?.toString() ?? '0') ?? 0);
@@ -27,7 +81,6 @@ class CampaignCard extends StatelessWidget {
         : (num.tryParse(campaign['progress_percentage']?.toString() ?? '0') ??
               0);
 
-    // Hitung persentase progress untuk LinearProgressIndicator (skala 0.0 - 1.0)
     double progressValue = progressPercentage > 0
         ? (progressPercentage / 100.0)
         : 0.0;
@@ -37,57 +90,33 @@ class CampaignCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Gambar Campaign (Dilengkapi Fallback ke Gambar Aset Default)
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: imageUrl != null && imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    // Jika URL ada tapi gagal load (misal masalah internet/server)
-                    errorBuilder: (context, error, stackTrace) => Image.asset(
-                      'assets/images/fas-logo.png',
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit
-                          .contain, // contain agar logo yayasan tidak terpotong
-                    ),
-                  )
-                : Image.asset(
-                    'assets/images/fas-logo.png',
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  ),
-          ),
+          // Render widget gambar yang sudah diamankan di atas
+          imageWidget,
 
-          // Konten Teks & Progress
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Judul Campaign
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    height: 1.3,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Progress Bar
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: progressValue,
                     backgroundColor: Colors.grey.shade200,
@@ -97,9 +126,8 @@ class CampaignCard extends StatelessWidget {
                     minHeight: 8,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // Informasi Dana Terkumpul & Target
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -108,10 +136,11 @@ class CampaignCard extends StatelessWidget {
                       children: [
                         const Text(
                           'Terkumpul',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          'Rp $totalCollected',
+                          CurrencyFormatter.toRupiah(totalCollected),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -125,10 +154,11 @@ class CampaignCard extends StatelessWidget {
                       children: [
                         const Text(
                           'Target',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          'Rp $targetAmount',
+                          CurrencyFormatter.toRupiah(targetAmount),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -139,14 +169,11 @@ class CampaignCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                const Divider(height: 24, thickness: 0.8),
 
-                const SizedBox(height: 8),
-
-                // Badge Persentase & Row Aksi Tombol
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Sisi Kiri: Tombol Navigasi Aksi Ekstra
                     Row(
                       children: [
                         TextButton.icon(
@@ -162,15 +189,25 @@ class CampaignCard extends StatelessWidget {
                           },
                           icon: const Icon(Icons.info_outline, size: 16),
                           label: const Text(
-                            'Detail Campaign',
-                            style: TextStyle(fontSize: 12),
+                            'Detail',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(60, 30),
+                            foregroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            backgroundColor: Colors.blue.shade50,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         TextButton.icon(
                           onPressed: () {
                             Navigator.push(
@@ -184,33 +221,41 @@ class CampaignCard extends StatelessWidget {
                           },
                           icon: const Icon(Icons.assignment_outlined, size: 16),
                           label: const Text(
-                            'Riwayat Distribusi',
-                            style: TextStyle(fontSize: 12),
+                            'Laporan',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(70, 30),
-                            foregroundColor: Colors.orange,
+                            foregroundColor: Colors.orange.shade800,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            backgroundColor: Colors.orange.shade50,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    // Sisi Kanan: Status Persentase
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 10,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.blue.shade600,
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '${progressPercentage.round()}%',
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue,
+                          color: Colors.white,
                         ),
                       ),
                     ),
