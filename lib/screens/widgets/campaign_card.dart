@@ -14,57 +14,11 @@ class CampaignCard extends StatelessWidget {
     final String title = campaign['title'] ?? 'Tanpa Judul';
     String? imageUrl = campaign['image_url'];
 
-    // --- PENANGANAN CACHE & FIX URL GAMBAR ---
-    Widget imageWidget;
-
+    // --- PENANGANAN DAN PERBAIKAN URL GAMBAR ---
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      // Jika Anda menggunakan emulator Android, konversi 'localhost' dari Laravel ke IP gateway '10.0.2.2'
       if (imageUrl.contains('localhost')) {
         imageUrl = imageUrl.replaceAll('localhost', '10.0.2.2');
       }
-
-      try {
-        // Menambahkan unique timestamp menggunakan Uri agar struktur URL tidak rusak/pecah
-        final Uri originalUri = Uri.parse(imageUrl);
-        final Uri optimizedUri = originalUri.replace(
-          queryParameters: {
-            ...originalUri.queryParameters,
-            't': DateTime.now().millisecondsSinceEpoch.toString(),
-          },
-        );
-
-        imageWidget = Image.network(
-          optimizedUri.toString(),
-          height: 180,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            debugPrint("Image network error: $error");
-            return Image.asset(
-              'assets/images/fas-logo.png',
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.contain,
-            );
-          },
-        );
-      } catch (e) {
-        // Jika Uri.parse gagal karena format string URL tidak valid
-        imageWidget = Image.asset(
-          'assets/images/fas-logo.png',
-          height: 180,
-          width: double.infinity,
-          fit: BoxFit.contain,
-        );
-      }
-    } else {
-      // Jika memang image_url dari API Laravel bernilai null
-      imageWidget = Image.asset(
-        'assets/images/fas-logo.png',
-        height: 180,
-        width: double.infinity,
-        fit: BoxFit.contain,
-      );
     }
 
     // --- AMANKAN PARSING TIPE DATA ---
@@ -95,8 +49,29 @@ class CampaignCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Render widget gambar yang sudah diamankan di atas
-          imageWidget,
+          // Render Gambar Utama dengan Kunci Unik Otomatis
+          imageUrl != null && imageUrl.isNotEmpty
+              ? Image.network(
+                  imageUrl,
+                  // Trik Inti: ValueKey menggunakan URL gambar dinamis. Jika URL atau datanya berubah,
+                  // Flutter dipaksa untuk membuang element lama dan mendownload gambar terbaru secara bersih.
+                  key: ValueKey(imageUrl),
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Image.asset(
+                    'assets/images/fas-logo.png',
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
+                )
+              : Image.asset(
+                  'assets/images/fas-logo.png',
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                ),
 
           Padding(
             padding: const EdgeInsets.all(16.0),

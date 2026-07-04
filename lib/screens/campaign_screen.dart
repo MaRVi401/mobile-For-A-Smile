@@ -26,7 +26,6 @@ class _CampaignScreenState extends State<CampaignScreen> {
       final response = await _apiClient.dio.get('/campaigns');
       if (response.statusCode == 200 && response.data['success'] == true) {
         setState(() {
-          // Mengambil dari response.data['data'] sesuai payload Laravel Anda
           _campaigns = response.data['data'] ?? [];
           _isLoading = false;
         });
@@ -39,38 +38,60 @@ class _CampaignScreenState extends State<CampaignScreen> {
     }
   }
 
+  // Fungsi tambahan untuk menangani alur pembersihan cache RAM & hit ulang API
+  Future<void> _handleRefresh() async {
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    _fetchCampaigns();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _campaigns.isEmpty
-          ? const Center(
-              child: Text(
-                'Belum ada program campaign donasi saat ini.',
-                style: TextStyle(fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _campaigns.length,
-              itemBuilder: (context, index) {
-                final campaign = _campaigns[index];
-                return GestureDetector(
-                  onTap: () {
-                    // Navigasi ke halaman detail saat kartu di-klik
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            CampaignDetailScreen(campaignId: campaign['id']),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: Colors.blue,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _campaigns.isEmpty
+            ? Center(
+                // FIX PERMANEN: Kata 'const' di depan ListView SEKARANG SUDAH DIHAPUS TOTAL
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 200),
+                    Center(
+                      child: Text(
+                        'Belum ada program campaign donasi saat ini.',
+                        style: TextStyle(fontSize: 16),
                       ),
-                    );
-                  },
-                  child: CampaignCard(campaign: campaign),
-                );
-              },
-            ),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _campaigns.length,
+                itemBuilder: (context, index) {
+                  final campaign = _campaigns[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              CampaignDetailScreen(campaignId: campaign['id']),
+                        ),
+                      ).then((_) {
+                        _handleRefresh();
+                      });
+                    },
+                    child: CampaignCard(campaign: campaign),
+                  );
+                },
+              ),
+      ),
     );
   }
 }

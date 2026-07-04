@@ -40,8 +40,9 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         elevation: 2,
       ),
-      // IndexedStack menjaga agar halaman tidak re-load/refresh dari awal saat ganti tab
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      // PERBAIKAN DI SINI: Mengubah IndexedStack menjadi rendering dinamis langsung.
+      // Ini memastikan initState() di setiap screen dipicu ulang untuk Get API baru saat tab berpindah.
+      body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
