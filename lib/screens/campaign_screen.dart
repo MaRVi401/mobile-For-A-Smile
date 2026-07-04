@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../network/api_client.dart';
 import 'widgets/campaign_card.dart';
+import 'campaign_detail_screen.dart'; // Import halaman detail
 
 class CampaignScreen extends StatefulWidget {
   const CampaignScreen({super.key});
@@ -23,11 +24,10 @@ class _CampaignScreenState extends State<CampaignScreen> {
   void _fetchCampaigns() async {
     try {
       final response = await _apiClient.dio.get('/campaigns');
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data['success'] == true) {
         setState(() {
-          _campaigns = response.data is List
-              ? response.data
-              : (response.data['data'] ?? []);
+          // Mengambil dari response.data['data'] sesuai payload Laravel Anda
+          _campaigns = response.data['data'] ?? [];
           _isLoading = false;
         });
       }
@@ -35,7 +35,7 @@ class _CampaignScreenState extends State<CampaignScreen> {
       setState(() {
         _isLoading = false;
       });
-      print("Error fetching campaigns: $e");
+      debugPrint("Error fetching campaigns: $e");
     }
   }
 
@@ -56,7 +56,19 @@ class _CampaignScreenState extends State<CampaignScreen> {
               itemCount: _campaigns.length,
               itemBuilder: (context, index) {
                 final campaign = _campaigns[index];
-                return CampaignCard(campaign: campaign);
+                return GestureDetector(
+                  onTap: () {
+                    // Navigasi ke halaman detail saat kartu di-klik
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            CampaignDetailScreen(campaignId: campaign['id']),
+                      ),
+                    );
+                  },
+                  child: CampaignCard(campaign: campaign),
+                );
               },
             ),
     );

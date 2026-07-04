@@ -9,62 +9,71 @@ class CampaignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Parsing ID secara aman
-    final int campaignId = campaign['id'] is int
-        ? campaign['id']
-        : int.tryParse(campaign['id']?.toString() ?? '1') ?? 1;
+    final int campaignId = campaign['id'] ?? 0;
+    final String title = campaign['title'] ?? 'Tanpa Judul';
+    final String? imageUrl = campaign['image_url'];
 
-    final String title = campaign['title'] ?? 'Campaign Donasi';
-    final String imageUrl =
-        campaign['image_url'] ?? 'https://via.placeholder.com/150';
+    // Amankan parsing tipe data JSON dari Laravel
+    final num targetAmount = campaign['target_amount'] is num
+        ? campaign['target_amount']
+        : (num.tryParse(campaign['target_amount']?.toString() ?? '0') ?? 0);
 
-    // Konversi aman dari String/Dynamic ke Double untuk menghindari error 'String is not a subtype of num'
-    final double currentAmount =
-        double.tryParse(campaign['current_amount']?.toString() ?? '0') ?? 0.0;
-    final double targetAmount =
-        double.tryParse(campaign['target_amount']?.toString() ?? '1') ?? 1.0;
+    final num totalCollected = campaign['total_collected'] is num
+        ? campaign['total_collected']
+        : (num.tryParse(campaign['total_collected']?.toString() ?? '0') ?? 0);
 
-    // Hitung persentase progres donasi
-    double progress = currentAmount / targetAmount;
-    if (progress > 1.0) progress = 1.0;
-    if (progress < 0.0) progress = 0.0;
+    final num progressPercentage = campaign['progress_percentage'] is num
+        ? campaign['progress_percentage']
+        : (num.tryParse(campaign['progress_percentage']?.toString() ?? '0') ??
+              0);
+
+    // Hitung persentase progress untuk LinearProgressIndicator (skala 0.0 - 1.0)
+    double progressValue = progressPercentage > 0
+        ? (progressPercentage / 100.0)
+        : 0.0;
+    if (progressValue > 1.0) progressValue = 1.0;
+    if (progressValue < 0.0) progressValue = 0.0;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16.0),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gambar Banner Campaign
+          // 1. Gambar Campaign (Dilengkapi Fallback ke Gambar Aset Default)
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              imageUrl,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 160,
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(
-                      Icons.broken_image,
-                      color: Colors.grey,
-                      size: 40,
+            child: imageUrl != null && imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    // Jika URL ada tapi gagal load (misal masalah internet/server)
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                      'assets/images/fas-logo.png',
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit
+                          .contain, // contain agar logo yayasan tidak terpotong
                     ),
+                  )
+                : Image.asset(
+                    'assets/images/fas-logo.png',
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
                   ),
-                );
-              },
-            ),
           ),
-          // Judul dan Progres Bar Donasi
+
+          // Konten Teks & Progress
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Judul Campaign
                 Text(
                   title,
                   style: const TextStyle(
@@ -75,93 +84,141 @@ class CampaignCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
+
+                // Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progressValue,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.blue,
+                    ),
+                    minHeight: 8,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Informasi Dana Terkumpul & Target
                 Row(
-                  // PERBAIKAN DI SINI: Mengubah 'between' menjadi 'spaceBetween'
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Terkumpul: Rp ${campaign['current_amount'] ?? 0}",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Terkumpul',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        Text(
+                          'Rp $totalCollected',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      "${(progress * 100).toStringAsFixed(0)}%",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Target',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        Text(
+                          'Rp $targetAmount',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Badge Persentase & Row Aksi Tombol
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Sisi Kiri: Tombol Navigasi Aksi Ekstra
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CampaignDetailScreen(
+                                  campaignId: campaignId,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.info_outline, size: 16),
+                          label: const Text(
+                            'Detail Campaign',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(60, 30),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CampaignReportScreen(
+                                  campaignId: campaignId,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.assignment_outlined, size: 16),
+                          label: const Text(
+                            'Riwayat Distribusi',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(70, 30),
+                            foregroundColor: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Sisi Kanan: Status Persentase
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${progressPercentage.round()}%',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.grey[200],
-                  color: const Color(
-                    0xFF2ECC71,
-                  ), // Warna Emerald Green aman kustom
-                  minHeight: 6,
-                ),
               ],
             ),
           ),
-          const Divider(height: 1),
-          // Tombol Navigasi Detail & Laporan Dana
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          CampaignDetailScreen(campaignId: campaignId),
-                    ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.chrome_reader_mode_outlined,
-                  size: 18,
-                  color: Colors.blue,
-                ),
-                label: const Text(
-                  "Detail Program",
-                  style: TextStyle(color: Colors.blue),
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 25,
-                color: Colors.grey[300],
-              ), // Garis Pembatas Vertikal
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          CampaignReportScreen(campaignId: campaignId),
-                    ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.bar_chart_rounded,
-                  size: 18,
-                  color: Colors.orange,
-                ),
-                label: const Text(
-                  "Laporan Dana",
-                  style: TextStyle(color: Colors.orange),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
         ],
       ),
     );
