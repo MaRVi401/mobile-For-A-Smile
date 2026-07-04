@@ -69,7 +69,97 @@ android {
 }
 
 ```
+---
+# 🌐 Konfigurasi API Endpoint
 
+Sebelum menjalankan aplikasi, ubah file berikut:
+
+```
+lib/constants/api_endpoints.dart
+```
+
+Sesuaikan nilai:
+
+```dart
+static const String baseUrl = "...";
+```
+
+Gunakan sesuai kebutuhan.
+
+## Menggunakan Ngrok (Direkomendasikan)
+
+```dart
+static const String baseUrl =
+    "https://xxxx.ngrok-free.app/api";
+```
+
+---
+
+## Menggunakan Android Emulator (AVD)
+
+```dart
+static const String baseUrl =
+    "http://10.0.2.2:8000/api";
+```
+
+---
+
+### Menggunakan HP Fisik (Real Device)
+
+Gunakan alamat IP lokal komputer/laptop yang menjalankan server Laravel.
+
+Pastikan:
+
+- Laptop dan HP berada pada jaringan Wi-Fi yang sama.
+- Server Laravel sedang berjalan (`php artisan serve`).
+
+Contoh:
+
+```dart
+static const String baseUrl =
+    "http://<IP-LAPTOP>:8000/api";
+```
+
+Misalnya jika IP laptop adalah:
+
+```text
+192.168.18.27
+```
+
+maka:
+
+```dart
+static const String baseUrl =
+    "http://192.168.18.27:8000/api";
+```
+
+> 💡 Untuk mengetahui IP laptop:
+>
+> **Windows**
+> ```bash
+> ipconfig
+> ```
+> Lihat bagian **IPv4 Address**.
+>
+> **Linux/macOS**
+> ```bash
+> ifconfig
+> ```
+> atau
+> ```bash
+> ip addr
+
+---
+
+Endpoint lainnya akan terbentuk secara otomatis.
+
+```dart
+static const String register = "$baseUrl/register";
+static const String login = "$baseUrl/login";
+static const String logout = "$baseUrl/logout";
+static const String forgotPassword = "$baseUrl/forgot-password";
+static const String resetPassword = "$baseUrl/reset-password";
+```
 ---
 
 ## 🏃 Langkah Instalasi & Menjalankan Aplikasi
@@ -138,14 +228,28 @@ flutter run
 
 ```text
 lib/
-├── constants/          # Kumpulan endpoint API dan konfigurasi global
-├── network/            # Konfigurasi Dio Link & Interceptor API Client
-├── screens/            # Layanan antarmuka (UI Screens)
-│   ├── widgets/        # Komponen UI kecil reusable (misal: CampaignCard)
-│   ├── login_screen.dart
-│   ├── dashboard_screen.dart
-│   └── ...
-└── utils/              # Fungsi pemformatan (Format mata uang Rupiah/Tanggal)
+├── main.dart                      # Titik masuk utama (Entry point) jalannya aplikasi
+├── constants/
+│   └── api_endpoints.dart         # Pengelolaan alamat URL dan endpoint API
+├── network/
+│   └── api_client.dart            # Konfigurasi Dio Link, Header, & Interceptor HTTP
+├── utils/
+│   └── formatter.dart             # Helper pemformatan Rupiah (IDR) & Tanggal
+└── screens/                       # Manajemen Halaman / Antarmuka (UI)
+    ├── widgets/
+    │   └── campaign_card.dart     # Komponen kartu kampanye donasi (Reusable)
+    ├── login_screen.dart          # Halaman Masuk Akun
+    ├── register_screen.dart       # Halaman Daftar Akun
+    ├── forgot_password_screen.dart# Halaman Request OTP/Link Lupa Sandi
+    ├── reset_password_screen.dart # Halaman Pembuatan Sandi Baru
+    ├── dashboard_screen.dart      # Ringkasan menu utama & banner kampanye
+    ├── main_navigation.dart       # Pengendali navigasi bawah (Bottom Navigation Bar)
+    ├── campaign_screen.dart       # Daftar penjelajahan kampanye
+    ├── campaign_detail_screen.dart# Informasi lengkap per kampanye donasi
+    ├── campaign_report_screen.dart# Laporan penggunaan dana donasi
+    ├── payment_web_view_screen.dart# Webview untuk pemrosesan gerbang pembayaran
+    ├── history_screen.dart        # Log riwayat donasi pengguna
+    └── profile_screen.dart        # Informasi akun & kontrol upload foto profil
 
 ```
 
