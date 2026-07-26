@@ -25,6 +25,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _myTotalDonationsCount = 0;
   double _myTotalDonatedAmount = 0.0;
 
+  // Diturunkan dari historyData yang sudah difetch (bukan API baru)
+  DateTime? _lastDonationDate;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +88,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               double.tryParse(amountRaw?.toString() ?? '0') ?? 0.0;
           return sum + amount;
         });
+
+        // Ambil tanggal donasi terakhir dari data yang sudah ada (tanpa API baru)
+        DateTime? latest;
+        for (final item in successfulDonations) {
+          final dateRaw = item['created_at'] ?? item['date'];
+          final parsed = DateTime.tryParse(dateRaw?.toString() ?? '');
+          if (parsed != null && (latest == null || parsed.isAfter(latest))) {
+            latest = parsed;
+          }
+        }
+        _lastDonationDate = latest;
       }
     } catch (e) {
       debugPrint("Error loading Kitabisa Dashboard: $e");
@@ -95,223 +109,235 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  String _formatLastDonation() {
+    if (_lastDonationDate == null) return '-';
+    final d = _lastDonationDate!;
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+
+  String _formatToday() {
+    const hari = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const bulan = [
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final now = DateTime.now();
+    final namaHari = hari[now.weekday - 1];
+    return '$namaHari\n${now.day} ${bulan[now.month]} ${now.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: const Color(0xFFF7F7F7),
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  color: Colors.blue,
+                  color: Color(0xFFFDBE00),
                   strokeWidth: 3,
                 ),
               )
             : RefreshIndicator(
                 onRefresh: _loadKitabisaDashboardData,
+                color: const Color(0xFFFDBE00),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ================= KEPALA DASHBOARD (HEADER & PROFILE) =================
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(24),
-                            bottomRight: Radius.circular(24),
-                          ),
-                        ),
-                        child: Column(
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProfileScreen(),
-                                      ),
-                                    ).then((_) => _loadKitabisaDashboardData());
-                                  },
-                                  child: CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: Colors.blue.shade50,
-                                    backgroundImage: _avatarUrl != null
-                                        ? NetworkImage(_avatarUrl!)
-                                        : null,
-                                    child: _avatarUrl == null
-                                        ? const Icon(
-                                            Icons.person,
-                                            color: Colors.blue,
-                                            size: 24,
-                                          )
-                                        : null,
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ProfileScreen(),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Selamat Datang 👋',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      Text(
-                                        _userName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.notifications_none_rounded,
-                                  color: Colors.black54,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // ================= KANTONG KEBAIKAN (DOMPET DONASI STYLE KITABISA) =================
-                            Container(
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade600,
-                                borderRadius: BorderRadius.circular(16),
-                                image: const DecorationImage(
-                                  image: AssetImage(
-                                    'assets/images/pattern.png',
-                                  ), // Opsional jika ada aset pola banner
-                                  fit: BoxFit.cover,
-                                  opacity: 0.1,
-                                ),
+                                ).then((_) => _loadKitabisaDashboardData());
+                              },
+                              child: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.orange.shade100,
+                                backgroundImage: _avatarUrl != null
+                                    ? NetworkImage(_avatarUrl!)
+                                    : null,
+                                child: _avatarUrl == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: Color(0xFFFDBE00),
+                                        size: 26,
+                                      )
+                                    : null,
                               ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.wallet_giftcard_rounded,
-                                        color: Colors.white70,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Total Donasi Anda',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
+                                  const Text(
+                                    'Hallo !',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
                                   ),
-                                  const SizedBox(height: 6),
                                   Text(
-                                    CurrencyFormatter.toRupiah(
-                                      _myTotalDonatedAmount,
-                                    ),
+                                    _userName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
+                                      fontSize: 17,
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 12.0,
-                                    ),
-                                    child: Divider(
-                                      color: Colors.white24,
-                                      height: 1,
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '$_myTotalDonationsCount Kali Berbagi Kebaikan',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.9,
-                                          ),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      InkWell(
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const HistoryScreen(),
-                                            ),
-                                          );
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white24,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            children: [
-                                              Text(
-                                                'Riwayat',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              SizedBox(width: 4),
-                                              Icon(
-                                                Icons.arrow_forward_ios_rounded,
-                                                color: Colors.white,
-                                                size: 10,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ],
                               ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _formatToday().split('\n').first,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  _formatToday().split('\n').last,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 10),
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(
+                                  Icons.notifications_none_rounded,
+                                  color: Colors.black87,
+                                  size: 26,
+                                ),
+                                Positioned(
+                                  right: -2,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 14,
+                                      minHeight: 14,
+                                    ),
+                                    child: const Text(
+                                      '1',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
 
+                      // ================= KANTONG KEBAIKAN (STATISTIK ALA MOCKUP) =================
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5A623),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatItem(
+                                  icon: Icons.monetization_on_rounded,
+                                  label: 'Total Donasi Anda',
+                                  value: CurrencyFormatter.toRupiah(
+                                    _myTotalDonatedAmount,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 50,
+                                color: Colors.white38,
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const HistoryScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: _buildStatItem(
+                                    icon: Icons.volunteer_activism_rounded,
+                                    label: 'Terakhir Donasi',
+                                    value: _formatLastDonation(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                       // ================= MENU EKSPLORASI / ANALITIK UTAMA =================
                       Padding(
-                        padding: const EdgeInsets.all(20.0),
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Menu Penyaluran',
+                              'Program kampanye',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -323,11 +349,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             // Baris Menu 1: Jelajah Campaign
                             _buildKitabisaMenuCard(
                               icon: Icons.favorite_rounded,
-                              iconColor: Colors.pink,
                               title: 'Salurkan Bantuan Baru',
                               subtitle:
                                   'Lihat $_totalCampaignsActive galang dana mendesak yang butuh pertolongan',
-                              badgeText: 'Mendesak',
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -343,7 +367,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             // Baris Menu 2: Pantau Transaksi Midtrans
                             _buildKitabisaMenuCard(
                               icon: Icons.receipt_long_rounded,
-                              iconColor: Colors.blue.shade700,
                               title: 'Status Pembayaran Instan',
                               subtitle:
                                   'Cek token status pending/sukses transaksi Midtrans Snap Anda',
@@ -361,7 +384,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             // Baris Menu 3: Edit Profil Pengguna
                             _buildKitabisaMenuCard(
                               icon: Icons.manage_accounts_rounded,
-                              iconColor: Colors.teal,
                               title: 'Pengaturan Akun & Profil',
                               subtitle:
                                   'Perbarui nama lengkap, email instansi, atau ganti password keamanan',
@@ -385,26 +407,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Komponen Pembuat Kartu Menu Eksplorasi Premium ala Kitabisa
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: const Color(0xFFF5A623), size: 20),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.black87, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  // Komponen Pembuat Kartu Menu — gaya rounded border kuning ala mockup
   Widget _buildKitabisaMenuCard({
     required IconData icon,
-    required Color iconColor,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    String? badgeText,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFE9A8),
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.black, width: 1.2),
       ),
       child: Material(
         color: Colors.transparent,
@@ -412,62 +461,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(14.0),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  child: Icon(icon, color: const Color(0xFFF5A623), size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          if (badgeText != null) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.pink.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                badgeText,
-                                style: const TextStyle(
-                                  color: Colors.pink,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.black54,
                           height: 1.3,
                         ),
                       ),
@@ -475,13 +500,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Align(
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: Colors.black26,
-                    size: 12,
-                  ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.black45,
+                  size: 12,
                 ),
               ],
             ),

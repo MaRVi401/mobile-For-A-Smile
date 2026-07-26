@@ -1,26 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'screens/splash_screen.dart';
+import 'screens/after_splash_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/main_navigation.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  const storage = FlutterSecureStorage();
-  String? token = await storage.read(key: 'access_token');
-
-  runApp(
-    MyApp(
-      initialScreen: token != null
-          ? const MainNavigation() // Jika sudah login, masuk ke struktur navigasi utama
-          : const LoginScreen(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final Widget initialScreen;
-  const MyApp({super.key, required this.initialScreen});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +22,13 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: initialScreen,
+      home: const SplashScreen(), // selalu mulai dari splash
+      routes: {
+        '/after_splash': (context) => const AfterSplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/main': (context) => const MainNavigation(),
+      },
     );
   }
 }

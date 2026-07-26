@@ -50,7 +50,11 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFDBE00)),
+        ),
+      );
     }
 
     if (_reportData == null) {
@@ -64,10 +68,18 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
         _reportData!['distribution_history'] ?? [];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
         title: const Text(
           'Laporan Akuntabilitas Dana',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -96,10 +108,9 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Card(
-              elevation: 0,
-              color: Colors.blue.shade50,
-              shape: RoundedRectangleBorder(
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3D9),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Padding(
@@ -111,18 +122,18 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
                       CurrencyFormatter.toRupiah(
                         _safeParse(report['total_collected']),
                       ),
-                      Colors.green,
+                      Colors.green.shade700,
                     ),
                     const SizedBox(height: 12),
                     _buildReportRow(
                       'Total Dana Disalurkan',
                       '- ${CurrencyFormatter.toRupiah(_safeParse(report['total_distributed']))}',
-                      Colors.orange.shade800,
+                      const Color(0xFFF5A623),
                     ),
                     const Divider(
                       height: 24,
                       thickness: 1,
-                      color: Colors.blueAccent,
+                      color: Color(0xFFFDBE00),
                     ),
                     _buildReportRow(
                       'Sisa Saldo Kas',
@@ -160,12 +171,12 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
                     itemCount: distributions.length,
                     itemBuilder: (context, index) {
                       final dist = distributions[index];
-                      return Card(
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 12.0),
-                        elevation: 0.5,
-                        shape: RoundedRectangleBorder(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: Colors.grey.shade200),
+                          border: Border.all(color: const Color(0xFFFDBE00)),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -180,9 +191,9 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
                                     CurrencyFormatter.toRupiah(
                                       _safeParse(dist['amount_distributed']),
                                     ),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.orange.shade800,
+                                      color: Color(0xFFF5A623),
                                       fontSize: 16,
                                     ),
                                   ),
@@ -192,14 +203,14 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
+                                      color: const Color(0xFFFFE9A8),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       dist['date'] ?? '',
                                       style: const TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey,
+                                        color: Colors.black87,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -211,7 +222,7 @@ class _CampaignReportScreenState extends State<CampaignReportScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
+                                  color: const Color(0xFFF7F7F7),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: RichText(

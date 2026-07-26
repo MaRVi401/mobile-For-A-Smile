@@ -14,7 +14,6 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  // List halaman diurutkan sesuai urutan tombol di bottom navigation
   final List<Widget> _screens = [
     const DashboardScreen(), // Index 0
     const CampaignScreen(), // Index 1
@@ -22,7 +21,6 @@ class _MainNavigationState extends State<MainNavigation> {
     const ProfileScreen(), // Index 3
   ];
 
-  // Kumpulan judul AppBar dinamis mengikuti screen yang aktif
   final List<String> _titles = [
     'Dashboard Analytic',
     'Program Campaign',
@@ -40,16 +38,10 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         elevation: 2,
       ),
-      // PERBAIKAN DI SINI: Mengubah IndexedStack menjadi rendering dinamis langsung.
-      // Ini memastikan initState() di setiap screen dipicu ulang untuk Get API baru saat tab berpindah.
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
