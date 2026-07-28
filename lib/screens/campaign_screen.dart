@@ -101,41 +101,41 @@ class _CampaignScreenState extends State<CampaignScreen> {
             ),
 
             // ================= FILTER TAHUN (UI saja, belum fungsional) =================
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFDBE00),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Tahun 2026',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                          fontSize: 13,
-                        ),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                        color: Colors.black87,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16),
+            //   child: Align(
+            //     alignment: Alignment.centerLeft,
+            //     child: Container(
+            //       padding: const EdgeInsets.symmetric(
+            //         horizontal: 12,
+            //         vertical: 8,
+            //       ),
+            //       decoration: BoxDecoration(
+            //         color: const Color(0xFFFDBE00),
+            //         borderRadius: BorderRadius.circular(10),
+            //       ),
+            //       child: const Row(
+            //         mainAxisSize: MainAxisSize.min,
+            //         children: [
+            //           Text(
+            //             'Tahun 2026',
+            //             style: TextStyle(
+            //               fontWeight: FontWeight.bold,
+            //               color: Colors.black87,
+            //               fontSize: 13,
+            //             ),
+            //           ),
+            //           SizedBox(width: 6),
+            //           Icon(
+            //             Icons.keyboard_arrow_down_rounded,
+            //             size: 18,
+            //             color: Colors.black87,
+            //           ),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             const SizedBox(height: 8),
 

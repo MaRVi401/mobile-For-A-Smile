@@ -5,6 +5,7 @@ import '../utils/formatter.dart';
 import 'profile_screen.dart';
 import 'campaign_screen.dart';
 import 'history_screen.dart';
+import 'campaign_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,6 +28,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Diturunkan dari historyData yang sudah difetch (bukan API baru)
   DateTime? _lastDonationDate;
+
+  // Campaign terbaru, diambil dari list /campaigns yang sudah difetch (bukan API baru)
+  Map<String, dynamic>? _latestCampaign;
 
   @override
   void initState() {
@@ -66,6 +70,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           responses[1].data['success'] == true) {
         final List<dynamic> campaigns = responses[1].data['data'] ?? [];
         _totalCampaignsActive = campaigns.length;
+
+        // Ambil campaign pertama dari list sebagai "Campaign Terbaru"
+        if (campaigns.isNotEmpty) {
+          _latestCampaign = Map<String, dynamic>.from(campaigns.first);
+        } else {
+          _latestCampaign = null;
+        }
       }
 
       // 3. Kalkulasi Statistik Ala Kitabisa (Total Kantong Donasi Saya)
@@ -143,6 +154,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final now = DateTime.now();
     final namaHari = hari[now.weekday - 1];
     return '$namaHari\n${now.day} ${bulan[now.month]} ${now.year}';
+  }
+
+  num _safeParse(dynamic value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '0') ?? 0;
   }
 
   @override
@@ -240,41 +256,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 10),
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                const Icon(
-                                  Icons.notifications_none_rounded,
-                                  color: Colors.black87,
-                                  size: 26,
-                                ),
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 14,
-                                      minHeight: 14,
-                                    ),
-                                    child: const Text(
-                                      '1',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       ),
@@ -329,6 +310,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                       ),
+
+                      // ================= CAMPAIGN TERBARU =================
+                      if (_latestCampaign != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Campaign Terbaru',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const CampaignScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'Lihat Semua',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFF5A623),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: _buildLatestCampaignCard(_latestCampaign!),
+                        ),
+                      ],
 
                       // ================= MENU EKSPLORASI / ANALITIK UTAMA =================
                       Padding(
@@ -439,6 +463,235 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: const TextStyle(color: Colors.black87, fontSize: 12),
         ),
       ],
+    );
+  }
+
+  // Card untuk menampilkan campaign terbaru (data diambil dari list /campaigns yang sudah difetch)
+  Widget _buildLatestCampaignCard(Map<String, dynamic> campaign) {
+    final int campaignId = campaign['id'] ?? 0;
+    final String title = campaign['title'] ?? 'Tanpa Judul';
+    String? imageUrl = campaign['image_url'];
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.contains('localhost')) {
+        imageUrl = imageUrl.replaceAll('localhost', '10.0.2.2');
+      }
+    }
+
+    final num targetAmount = _safeParse(campaign['target_amount']);
+    final num totalCollected = _safeParse(campaign['total_collected']);
+    final num progressPercentage = _safeParse(campaign['progress_percentage']);
+
+    double progressValue = progressPercentage > 0
+        ? (progressPercentage / 100.0)
+        : 0.0;
+    if (progressValue > 1.0) progressValue = 1.0;
+    if (progressValue < 0.0) progressValue = 0.0;
+
+    final bool isDone = progressPercentage >= 100;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5A623),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: isDone
+                        ? Colors.green.shade300
+                        : Colors.amber.shade100,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isDone ? 'Selesai' : 'Berlangsung',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        key: ValueKey(imageUrl),
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Image.asset(
+                              'assets/images/fas-logo.png',
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.contain,
+                            ),
+                      )
+                    : Image.asset(
+                        'assets/images/fas-logo.png',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: SizedBox(
+                        height: 18,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Container(color: Colors.white),
+                            FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progressValue,
+                              child: Container(color: Colors.green),
+                            ),
+                            Center(
+                              child: Text(
+                                '${progressPercentage.round()}%',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          isDone
+              ? Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Berhasil Terkumpul ${CurrencyFormatter.toRupiah(totalCollected)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  'Terkumpul ${CurrencyFormatter.toRupiah(totalCollected)} Dari ${CurrencyFormatter.toRupiah(targetAmount)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CampaignDetailScreen(campaignId: campaignId),
+                    ),
+                  ).then((_) => _loadKitabisaDashboardData());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDone
+                      ? Colors.grey.shade400
+                      : const Color(0xFFE53935),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Donasi Sekarang',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CampaignDetailScreen(campaignId: campaignId),
+                    ),
+                  ).then((_) => _loadKitabisaDashboardData());
+                },
+                child: const Text(
+                  'Lihat detail kampanye',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
