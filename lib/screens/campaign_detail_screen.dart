@@ -64,23 +64,18 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
-                // Menggunakan Formatter bawaan Flutter untuk membatasi hanya angka
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onChanged: (value) {
                   if (value.isEmpty) return;
 
-                  // Bersihkan karakter non-angka terlebih dahulu
                   String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
                   int? parsed = int.tryParse(cleaned);
 
                   if (parsed != null) {
-                    // Menggunakan CurrencyFormatter bawaan utils/formatter.dart kamu
-                    // Kita hilangkan simbol "Rp" dan spasi-nya agar hanya menyisakan format titik saja (10.000)
                     String formatted = CurrencyFormatter.toRupiah(
                       parsed,
                     ).replaceAll('Rp', '').replaceAll(' ', '').trim();
 
-                    // Set ulang teks secara real-time tanpa merusak posisi kursor ketikan
                     amountController.value = TextEditingValue(
                       text: formatted,
                       selection: TextSelection.collapsed(
@@ -119,7 +114,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: const Color(0xFFE53935),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -149,7 +144,6 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   }
 
   void _processDonation(String amountStr) async {
-    // Bersihkan semua karakter titik (.) dari string rupiah sebelum dikirim ke API Laravel
     String cleanedAmount = amountStr.replaceAll('.', '');
     int? amount = int.tryParse(cleanedAmount);
 
@@ -205,7 +199,11 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFDBE00)),
+        ),
+      );
     }
 
     if (_detailData == null) {
@@ -222,271 +220,210 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
     final String? imageUrl = campaign['image_url'];
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            campaign['title'] ?? 'Detail Campaign',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        centerTitle: true,
+        title: Text(
+          campaign['title'] ?? 'Detail Campaign',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
-        body: Column(
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar Utama Campaign dengan Fitur Fallback Asset Image
-            imageUrl != null && imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Image.asset(
+            // Gambar utama campaign
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: imageUrl != null && imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Image.asset(
+                        'assets/images/fas-logo.png',
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Image.asset(
                       'assets/images/fas-logo.png',
                       height: 200,
                       width: double.infinity,
                       fit: BoxFit.contain,
                     ),
-                  )
-                : Image.asset(
-                    'assets/images/fas-logo.png',
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  ),
-
-            const TabBar(
-              labelColor: Colors.blue,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Colors.blue,
-              labelStyle: TextStyle(fontWeight: FontWeight.bold),
-              tabs: [
-                Tab(text: 'Deskripsi'),
-                Tab(text: 'Program Kerja'),
-                Tab(text: 'Laporan Dana'),
-              ],
             ),
 
-            Expanded(
-              child: TabBarView(
+            const SizedBox(height: 16),
+
+            // Deskripsi
+            Text(
+              'Target Dana: ${CurrencyFormatter.toRupiah(_safeParse(campaign['target_amount']))}',
+              style: const TextStyle(
+                color: Color(0xFFF5A623),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              campaign['description'] ?? 'Tidak ada deskripsi cerita.',
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.justify,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Program Kerja
+            if (programs.isNotEmpty) ...[
+              const Text(
+                'Program Kegiatan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ...programs.map((prog) => _buildProgramCard(prog)),
+              const SizedBox(height: 12),
+            ],
+
+            const SizedBox(height: 12),
+
+            // Laporan Dana
+            const Text(
+              'Ringkasan Dana',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(14.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3D9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
                 children: [
-                  // Tab 1: Deskripsi
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          campaign['title'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Target Dana: ${CurrencyFormatter.toRupiah(_safeParse(campaign['target_amount']))}',
-                          style: const TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        Text(
-                          campaign['description'] ??
-                              'Tidak ada deskripsi cerita.',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            height: 1.6,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                  _buildReportRow(
+                    'Total Terkumpul',
+                    CurrencyFormatter.toRupiah(
+                      _safeParse(report['total_collected']),
                     ),
+                    Colors.green.shade700,
                   ),
-
-                  // Tab 2: Program Kerja
-                  programs.isEmpty
-                      ? const Center(
-                          child: Text('Belum ada sub-program kerja.'),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16.0),
-                          itemCount: programs.length,
-                          itemBuilder: (context, index) {
-                            final prog = programs[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12.0),
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: ListTile(
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child:
-                                      prog['image_url'] != null &&
-                                          prog['image_url']
-                                              .toString()
-                                              .isNotEmpty
-                                      ? Image.network(
-                                          prog['image_url'],
-                                          width: 50,
-                                          height: 50,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          width: 50,
-                                          height: 50,
-                                          color: Colors.grey.shade200,
-                                          child: const Icon(Icons.assignment),
-                                        ),
-                                ),
-                                title: Text(
-                                  prog['program_name'] ?? '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  prog['description'] ?? '',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                  // Tab 3: Transparansi Laporan Dana
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Ringkasan Dana',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Card(
-                          color: Colors.grey.shade50,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(color: Colors.grey.shade200),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14.0),
-                            child: Column(
-                              children: [
-                                _buildReportRow(
-                                  'Total Terkumpul',
-                                  CurrencyFormatter.toRupiah(
-                                    _safeParse(report['total_collected']),
-                                  ),
-                                  Colors.green,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildReportRow(
-                                  'Total Disalurkan',
-                                  CurrencyFormatter.toRupiah(
-                                    _safeParse(report['total_distributed']),
-                                  ),
-                                  Colors.orange.shade800,
-                                ),
-                                const Divider(height: 20),
-                                _buildReportRow(
-                                  'Sisa Saldo Kas',
-                                  CurrencyFormatter.toRupiah(
-                                    _safeParse(report['remaining_balance']),
-                                  ),
-                                  Colors.blue,
-                                  isBold: true,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Riwayat Penyaluran Donasi',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        distributions.isEmpty
-                            ? const Text(
-                                'Belum ada riwayat distribusi dana.',
-                                style: TextStyle(color: Colors.grey),
-                              )
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: distributions.length,
-                                itemBuilder: (context, index) {
-                                  final dist = distributions[index];
-                                  return Card(
-                                    color: Colors.white,
-                                    margin: const EdgeInsets.only(bottom: 10.0),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      side: BorderSide(
-                                        color: Colors.grey.shade100,
-                                      ),
-                                    ),
-                                    child: ListTile(
-                                      title: Text(
-                                        'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange.shade800,
-                                        ),
-                                      ),
-                                      subtitle: Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 4.0,
-                                        ),
-                                        child: Text(
-                                          'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
-                                          style: const TextStyle(height: 1.3),
-                                        ),
-                                      ),
-                                      trailing: Text(
-                                        dist['date'] ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                      ],
+                  const SizedBox(height: 8),
+                  _buildReportRow(
+                    'Total Disalurkan',
+                    CurrencyFormatter.toRupiah(
+                      _safeParse(report['total_distributed']),
                     ),
+                    const Color(0xFFF5A623),
+                  ),
+                  const Divider(height: 20),
+                  _buildReportRow(
+                    'Sisa Saldo Kas',
+                    CurrencyFormatter.toRupiah(
+                      _safeParse(report['remaining_balance']),
+                    ),
+                    Colors.blue.shade700,
+                    isBold: true,
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            const Text(
+              'Riwayat Penyaluran Donasi',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            distributions.isEmpty
+                ? const Text(
+                    'Belum ada riwayat distribusi dana.',
+                    style: TextStyle(color: Colors.grey),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: distributions.length,
+                    itemBuilder: (context, index) {
+                      final dist = distributions[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10.0),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFF5A623),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
+                                    style: const TextStyle(
+                                      height: 1.3,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              dist['date'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+            const SizedBox(height: 20),
           ],
         ),
-        bottomNavigationBar: Padding(
-          padding: const EdgeInsets.all(16.0),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: const Color(0xFFE53935),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 52),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
-              elevation: 1,
+              elevation: 0,
             ),
             icon: const Icon(Icons.volunteer_activism),
             label: const Text(
@@ -496,6 +433,72 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
             onPressed: _openDonationDialog,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProgramCard(dynamic prog) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5A623),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Text(
+              prog['program_name'] ?? '',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child:
+                      prog['image_url'] != null &&
+                          prog['image_url'].toString().isNotEmpty
+                      ? Image.network(
+                          prog['image_url'],
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.assignment),
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    prog['description'] ?? '',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

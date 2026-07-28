@@ -86,12 +86,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFFF5A623),
+                ),
                 title: const Text('Pilih dari Galeri'),
                 onTap: () async {
                   Navigator.pop(context);
@@ -107,7 +113,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_camera),
+                leading: const Icon(
+                  Icons.photo_camera,
+                  color: Color(0xFFF5A623),
+                ),
                 title: const Text('Ambil dari Kamera'),
                 onTap: () async {
                   Navigator.pop(context);
@@ -206,14 +215,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  InputDecoration _fieldDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: const Color(0xFFF5A623)),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: const Color(0xFFF7F7F7),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFF5A623), width: 1.4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        backgroundColor: const Color(0xFFF7F7F7),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFDBE00)),
+              )
             : RefreshIndicator(
                 onRefresh: _fetchUserProfile,
+                color: const Color(0xFFFDBE00),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(24.0),
@@ -230,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 50,
-                                backgroundColor: Colors.blue.shade50,
+                                backgroundColor: const Color(0xFFFFE9A8),
                                 backgroundImage: _imageFile != null
                                     ? FileImage(_imageFile!)
                                     : (_avatarUrl != null
@@ -241,14 +276,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? const Icon(
                                         Icons.person_rounded,
                                         size: 56,
-                                        color: Colors.blue,
+                                        color: Color(0xFFF5A623),
                                       )
                                     : null,
                               ),
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: const BoxDecoration(
-                                  color: Colors.blue,
+                                  color: Color(0xFFF5A623),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -265,14 +300,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Section 1: Detail Profil Teks
                         TextFormField(
                           controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nama Lengkap',
-                            prefixIcon: const Icon(
-                              Icons.person_outline_rounded,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                          decoration: _fieldDecoration(
+                            label: 'Nama Lengkap',
+                            icon: Icons.person_outline_rounded,
                           ),
                           validator: (value) =>
                               (value == null || value.trim().isEmpty)
@@ -283,12 +313,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: 'Alamat Email',
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                          decoration: _fieldDecoration(
+                            label: 'Alamat Email',
+                            icon: Icons.email_outlined,
                           ),
                           validator: (value) =>
                               (value == null || value.trim().isEmpty)
@@ -317,21 +344,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: 'Password Baru',
-                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          decoration: _fieldDecoration(
+                            label: 'Password Baru',
+                            icon: Icons.lock_outline_rounded,
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
                                     ? Icons.visibility_off
                                     : Icons.visibility,
+                                color: Colors.grey.shade600,
                               ),
                               onPressed: () => setState(
                                 () => _obscurePassword = !_obscurePassword,
                               ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           validator: (value) {
@@ -347,22 +372,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _passwordConfirmController,
                           obscureText: _obscureConfirmPassword,
-                          decoration: InputDecoration(
-                            labelText: 'Konfirmasi Password Baru',
-                            prefixIcon: const Icon(Icons.lock_clock_outlined),
+                          decoration: _fieldDecoration(
+                            label: 'Konfirmasi Password Baru',
+                            icon: Icons.lock_clock_outlined,
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmPassword
                                     ? Icons.visibility_off
                                     : Icons.visibility,
+                                color: Colors.grey.shade600,
                               ),
                               onPressed: () => setState(
                                 () => _obscureConfirmPassword =
                                     !_obscureConfirmPassword,
                               ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           validator: (value) {
@@ -381,11 +404,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Aksi Simpan & Keluar
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: const Color(0xFFF5A623),
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 50),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             elevation: 0,
                           ),
@@ -414,7 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             minimumSize: const Size(double.infinity, 50),
                             side: BorderSide(color: Colors.red.shade200),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           icon: const Icon(Icons.logout_rounded, size: 18),

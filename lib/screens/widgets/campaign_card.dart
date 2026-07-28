@@ -14,14 +14,14 @@ class CampaignCard extends StatelessWidget {
     final String title = campaign['title'] ?? 'Tanpa Judul';
     String? imageUrl = campaign['image_url'];
 
-    // --- PENANGANAN DAN PERBAIKAN URL GAMBAR ---
+    // --- PENANGANAN DAN PERBAIKAN URL GAMBAR (TIDAK DIUBAH) ---
     if (imageUrl != null && imageUrl.isNotEmpty) {
       if (imageUrl.contains('localhost')) {
         imageUrl = imageUrl.replaceAll('localhost', '10.0.2.2');
       }
     }
 
-    // --- AMANKAN PARSING TIPE DATA ---
+    // --- AMANKAN PARSING TIPE DATA (TIDAK DIUBAH) ---
     final num targetAmount = campaign['target_amount'] is num
         ? campaign['target_amount']
         : (num.tryParse(campaign['target_amount']?.toString() ?? '0') ?? 0);
@@ -41,203 +41,230 @@ class CampaignCard extends StatelessWidget {
     if (progressValue > 1.0) progressValue = 1.0;
     if (progressValue < 0.0) progressValue = 0.0;
 
-    return Card(
+    final bool isDone = progressPercentage >= 100;
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5A623),
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Render Gambar Utama dengan Kunci Unik Otomatis
-          imageUrl != null && imageUrl.isNotEmpty
-              ? Image.network(
-                  imageUrl,
-                  // Trik Inti: ValueKey menggunakan URL gambar dinamis. Jika URL atau datanya berubah,
-                  // Flutter dipaksa untuk membuang element lama dan mendownload gambar terbaru secara bersih.
-                  key: ValueKey(imageUrl),
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Image.asset(
-                    'assets/images/fas-logo.png',
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
+          // Baris status + akses laporan
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: isDone
+                        ? Colors.green.shade300
+                        : Colors.amber.shade100,
                   ),
-                )
-              : Image.asset(
-                  'assets/images/fas-logo.png',
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                ),
-
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 14),
-
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: progressValue,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.blue,
+                  const SizedBox(width: 4),
+                  Text(
+                    isDone ? 'Selesai' : 'Berlangsung',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
-                    minHeight: 8,
                   ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CampaignReportScreen(campaignId: campaignId),
+                    ),
+                  );
+                },
+                child: const Icon(
+                  Icons.assignment_outlined,
+                  color: Colors.white,
+                  size: 18,
                 ),
-                const SizedBox(height: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- GAMBAR THUMBNAIL (TIDAK DIUBAH, HANYA UKURAN) ---
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        key: ValueKey(imageUrl),
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Image.asset(
+                              'assets/images/fas-logo.png',
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.contain,
+                            ),
+                      )
+                    : Image.asset(
+                        'assets/images/fas-logo.png',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Terkumpul',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          CurrencyFormatter.toRupiah(totalCollected),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text(
-                          'Target',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                    const SizedBox(height: 8),
+
+                    // --- PROGRESS BAR: DIPERBAIKI (root cause bug) ---
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: SizedBox(
+                        height: 18,
+                        // width mengikuti lebar Expanded secara otomatis
+                        child: Stack(
+                          fit: StackFit
+                              .expand, // <- kunci perbaikan: paksa semua child mengisi penuh area Stack
+                          children: [
+                            Container(color: Colors.white),
+                            FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progressValue,
+                              child: Container(color: Colors.green),
+                            ),
+                            Center(
+                              child: Text(
+                                '${progressPercentage.round()}%',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          CurrencyFormatter.toRupiah(targetAmount),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-                const Divider(height: 24, thickness: 0.8),
+              ),
+            ],
+          ),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 10),
+
+          isDone
+              ? Row(
                   children: [
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CampaignDetailScreen(
-                                  campaignId: campaignId,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.info_outline, size: 16),
-                          label: const Text(
-                            'Detail',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            backgroundColor: Colors.blue.shade50,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CampaignReportScreen(
-                                  campaignId: campaignId,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.assignment_outlined, size: 16),
-                          label: const Text(
-                            'Laporan',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.orange.shade800,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            backgroundColor: Colors.orange.shade50,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ],
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 16,
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade600,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                    const SizedBox(width: 6),
+                    Expanded(
                       child: Text(
-                        '${progressPercentage.round()}%',
+                        'Berhasil Terkumpul ${CurrencyFormatter.toRupiah(totalCollected)}',
                         style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
                           color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ],
+                )
+              : Text(
+                  'Terkumpul ${CurrencyFormatter.toRupiah(totalCollected)} Dari ${CurrencyFormatter.toRupiah(targetAmount)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
-              ],
-            ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CampaignDetailScreen(campaignId: campaignId),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDone
+                      ? Colors.grey.shade400
+                      : const Color(0xFFE53935),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Donasi Sekarang',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CampaignDetailScreen(campaignId: campaignId),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lihat detail kampanye',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
