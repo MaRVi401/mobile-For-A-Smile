@@ -138,10 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 40),
 
                       _buildField(
-                        label: 'Username',
+                        label: 'Email',
                         controller: _emailController,
-                        hint: 'Masukkan Username',
-                        icon: Icons.person_outline,
+                        hint: 'Masukkan Email',
+                        icon: Icons.mail,
                       ),
                       const SizedBox(height: 20),
                       _buildField(

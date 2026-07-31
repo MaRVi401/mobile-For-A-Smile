@@ -143,9 +143,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 18),
                       _buildField(
-                        label: 'Username',
+                        label: 'Email',
                         controller: _emailController,
-                        hint: 'Masukkan Username',
+                        hint: 'Masukkan Email',
                         icon: Icons.mail_outline,
                       ),
                       const SizedBox(height: 18),
