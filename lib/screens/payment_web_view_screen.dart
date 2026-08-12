@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../utils/invoice_helper.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
   final String url;
-  const PaymentWebViewScreen({super.key, required this.url});
+  // Tambahkan data transaksi opsional agar invoice lengkap
+  final Map<String, dynamic>? transactionData;
+
+  const PaymentWebViewScreen({
+    super.key,
+    required this.url,
+    this.transactionData,
+  });
 
   @override
   State<PaymentWebViewScreen> createState() => _PaymentWebViewScreenState();
@@ -12,11 +20,11 @@ class PaymentWebViewScreen extends StatefulWidget {
 class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _hasTriggeredSuccess = false; // Mencegah dialog muncul berulang kali
 
   @override
   void initState() {
     super.initState();
-    // Inisialisasi WebViewController secara dinamis dengan konfigurasi lengkap
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
@@ -32,14 +40,27 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               _isLoading = false;
             });
 
-            // Deteksi otomatis jika transaksi di Midtrans selesai secara sukses
-            if (url.contains('status_code=200') || url.contains('finish')) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Terima kasih! Transaksi selesai.'),
-                ),
-              );
-              Navigator.pop(context);
+            // Deteksi otomatis jika transaksi selesai
+            if ((url.contains('status_code=200') || url.contains('finish')) &&
+                !_hasTriggeredSuccess) {
+              _hasTriggeredSuccess = true;
+
+              // Ambil order_id dari parameter URL jika tidak ada di transactionData
+              final Uri uri = Uri.parse(url);
+              final String? orderIdParam = uri.queryParameters['order_id'];
+
+              final Map<String, dynamic> data =
+                  widget.transactionData ??
+                  {
+                    'order_id': orderIdParam ?? 'FAS-000',
+                    'amount': 0,
+                    'campaign_title': 'Donasi Kebaikan',
+                    'is_anonymous': false,
+                    'notes': '',
+                    'donor_name': 'Donatur',
+                  };
+
+              _showSuccessDialog(context, data);
             }
           },
           onWebResourceError: (WebResourceError error) {
@@ -50,11 +71,80 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
       ..loadRequest(Uri.parse(widget.url));
   }
 
-  // Fungsi untuk menampilkan Dialog Konfirmasi Pembatalan Transaksi
+  void _showSuccessDialog(
+    BuildContext context,
+    Map<String, dynamic> transactionData,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Column(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 60),
+            SizedBox(height: 10),
+            Text(
+              'Pembayaran Berhasil!',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Terima kasih atas bantuan dan donasi Anda.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowDirection: VerticalDirection.up,
+        actions: [
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53935),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 45),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.download),
+            label: const Text('Simpan Invoice (PDF)'),
+            onPressed: () {
+              // Perbaikan: Panggil savePdfDirectlyToStorage
+              InvoiceHelper.savePdfDirectlyToStorage(
+                context,
+                orderId: transactionData['order_id'] ?? 'FAS-000',
+                amount: transactionData['amount'] ?? 0,
+                campaignTitle:
+                    transactionData['campaign_title'] ?? 'Donasi Kebaikan',
+                isAnonymous: transactionData['is_anonymous'] ?? false,
+                notes: transactionData['notes'],
+                donorName: transactionData['donor_name'],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Tutup dialog
+              Navigator.popUntil(
+                context,
+                (route) => route.isFirst,
+              ); // Kembali ke Beranda
+            },
+            child: const Text(
+              'Kembali ke Beranda',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<bool> _showCancelDialog(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      barrierDismissible: false, // User wajib memilih tombol
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
@@ -73,15 +163,14 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), // Tidak jadi keluar
+            onPressed: () => Navigator.pop(context, false),
             child: const Text(
               'Lanjutkan Bayar',
               style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600),
             ),
           ),
           ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(context, true), // Ya, batalkan dan keluar
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade50,
               foregroundColor: Colors.red,
@@ -103,17 +192,13 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // PopScope digunakan untuk mencegat aksi Back (tombol fisik HP maupun gesture swipe)
     return PopScope(
-      canPop:
-          false, // Mengunci agar tidak langsung keluar sebelum dialog muncul
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-
-        // Panggil dialog konfirmasi pembatalan
         final shouldPop = await _showCancelDialog(context);
         if (shouldPop && context.mounted) {
-          Navigator.pop(context); // Jika pilih Ya, baru keluar dari WebView
+          Navigator.pop(context);
         }
       },
       child: Scaffold(
@@ -123,7 +208,6 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           elevation: 2,
-          // Custom tombol back di AppBar agar melewati fungsi intercept dialog kita
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
@@ -136,10 +220,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
         ),
         body: Stack(
           children: [
-            // Konten browser utama Midtrans Snap
             WebViewWidget(controller: _controller),
-
-            // Indikator loading animasi melingkar yang rapi
             if (_isLoading)
               const Center(
                 child: CircularProgressIndicator(color: Colors.blue),

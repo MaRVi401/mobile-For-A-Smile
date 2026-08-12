@@ -191,6 +191,9 @@ class _CampaignScreenState extends State<CampaignScreen> {
         campaign['status']?.toString() ?? (isDone ? 'selesai' : 'berlangsung');
     final bool isActive = status.toLowerCase() != 'selesai' && !isDone;
 
+    // Ambil daftar 5 donatur terbaru dari response API
+    final List<dynamic> recentDonors = campaign['recent_donors'] ?? [];
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
@@ -327,6 +330,161 @@ class _CampaignScreenState extends State<CampaignScreen> {
                   ],
                 ),
 
+          // ================= KONTEN BARU: 5 DONATUR TERAKHIR (DROPDOWN) =================
+          if (recentDonors.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 0,
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  dense: true,
+                  iconColor: Colors.white,
+                  collapsedIconColor: Colors.white,
+                  leading: const Icon(
+                    Icons.volunteer_activism_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  title: Text(
+                    'Lihat Donatur Terakhir (${recentDonors.length})',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  children: recentDonors.map((donor) {
+                    final String name = donor['donor_name'] ?? 'Hamba Allah';
+                    final num amount = _safeParse(donor['amount']);
+                    final String? notes = donor['notes'];
+                    final String? avatarUrl =
+                        donor['avatar_url'] ?? donor['user']?['avatar_url'];
+                    final bool isAnonymous = name == 'Hamba Allah';
+
+                    return Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ================= AVATAR PROFIL =================
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: SizedBox(
+                              width: 30,
+                              height: 30,
+                              child: isAnonymous
+                                  ? Container(
+                                      color: Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.visibility_off_outlined,
+                                        size: 16,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    )
+                                  : (avatarUrl != null && avatarUrl.isNotEmpty)
+                                  ? Image.network(
+                                      avatarUrl,
+                                      width: 30,
+                                      height: 30,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                color: const Color(0xFFFFF3D9),
+                                                child: const Icon(
+                                                  Icons.person,
+                                                  size: 18,
+                                                  color: Color(0xFFF5A623),
+                                                ),
+                                              ),
+                                    )
+                                  : Container(
+                                      color: const Color(0xFFFFF3D9),
+                                      child: const Icon(
+                                        Icons.person,
+                                        size: 18,
+                                        color: Color(0xFFF5A623),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatRupiah(amount),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFE53935),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (notes != null &&
+                                    notes.toString().trim().isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    '"$notes"',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey.shade700,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+
+          // ==================================================================
           const SizedBox(height: 12),
 
           Row(

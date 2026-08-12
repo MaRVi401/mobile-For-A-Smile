@@ -44,106 +44,171 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
   void _openDonationDialog() {
     final TextEditingController amountController = TextEditingController();
+    final TextEditingController notesController = TextEditingController();
+    bool isAnonymous = false;
 
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Masukkan Nominal Donasi',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: (value) {
-                  if (value.isEmpty) return;
-
-                  String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
-                  int? parsed = int.tryParse(cleaned);
-
-                  if (parsed != null) {
-                    String formatted = CurrencyFormatter.toRupiah(
-                      parsed,
-                    ).replaceAll('Rp', '').replaceAll(' ', '').trim();
-
-                    amountController.value = TextEditingValue(
-                      text: formatted,
-                      selection: TextSelection.collapsed(
-                        offset: formatted.length,
-                      ),
-                    );
-                  }
-                },
-                decoration: InputDecoration(
-                  prefixText: 'Rp ',
-                  prefixStyle: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  hintText: '10.000',
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Batal',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE53935),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Masukkan Nominal Donasi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: () {
-                      final String rawText = amountController.text;
-                      Navigator.pop(context);
-                      _processDonation(rawText);
-                    },
-                    child: const Text(
-                      'Lanjutkan',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (value) {
+                        if (value.isEmpty) return;
+
+                        String cleaned = value.replaceAll(
+                          RegExp(r'[^0-9]'),
+                          '',
+                        );
+                        int? parsed = int.tryParse(cleaned);
+
+                        if (parsed != null) {
+                          String formatted = CurrencyFormatter.toRupiah(
+                            parsed,
+                          ).replaceAll('Rp', '').replaceAll(' ', '').trim();
+
+                          amountController.value = TextEditingValue(
+                            text: formatted,
+                            selection: TextSelection.collapsed(
+                              offset: formatted.length,
+                            ),
+                          );
+                        }
+                      },
+                      decoration: InputDecoration(
+                        prefixText: 'Rp ',
+                        prefixStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        hintText: '10.000',
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(height: 12),
+
+                    // CHECKBOX ANONIM (PERBAIKAN FITUR 1)
+                    CheckboxListTile(
+                      title: const Text(
+                        'Sembunyikan nama saya (Hamba Allah)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      value: isAnonymous,
+                      onChanged: (bool? value) {
+                        setDialogState(() {
+                          isAnonymous = value ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // INPUT DOA / CATATAN (PERBAIKAN FITUR 2)
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Pesan / Doa Kebaikan (Opsional)',
+                        hintText: 'Tuliskan doa atau ucapan dukungan...',
+                        labelStyle: const TextStyle(fontSize: 13),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE53935),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                          ),
+                          onPressed: () {
+                            final String rawAmount = amountController.text;
+                            final String notes = notesController.text;
+                            Navigator.pop(context);
+                            _processDonation(
+                              amountStr: rawAmount,
+                              isAnonymous: isAnonymous,
+                              notes: notes,
+                            );
+                          },
+                          child: const Text(
+                            'Lanjutkan',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _processDonation(String amountStr) async {
+  void _processDonation({
+    required String amountStr,
+    required bool isAnonymous,
+    required String notes,
+  }) async {
     String cleanedAmount = amountStr.replaceAll('.', '');
     int? amount = int.tryParse(cleanedAmount);
 
@@ -158,7 +223,12 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     try {
       final response = await _apiClient.dio.post(
         '/donations',
-        data: {'campaign_id': widget.campaignId, 'amount': amount},
+        data: {
+          'campaign_id': widget.campaignId,
+          'amount': amount,
+          'is_anonymous': isAnonymous ? 1 : 0,
+          'notes': notes,
+        },
       );
 
       if (!mounted) return;
@@ -168,10 +238,22 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
             response.data['redirect_url'] ?? response.data['snap_url'] ?? '';
 
         if (redirectUrl.isNotEmpty) {
+          final campaign = _detailData?['campaign_details'];
+
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PaymentWebViewScreen(url: redirectUrl),
+              builder: (context) => PaymentWebViewScreen(
+                url: redirectUrl,
+                transactionData: {
+                  'order_id': response.data['data']?['order_id'] ?? 'FAS-000',
+                  'amount': amount,
+                  'campaign_title': campaign?['title'] ?? 'Donasi Kebaikan',
+                  'is_anonymous': isAnonymous,
+                  'notes': notes,
+                  'donor_name': isAnonymous ? 'Hamba Allah' : 'Donatur',
+                },
+              ),
             ),
           );
         } else {
@@ -362,53 +444,110 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                     itemCount: distributions.length,
                     itemBuilder: (context, index) {
                       final dist = distributions[index];
+                      final String? docImageUrl =
+                          dist['documentation_image_url'];
+                      final bool hasImage =
+                          docImageUrl != null && docImageUrl.isNotEmpty;
+
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 10.0),
+                        margin: const EdgeInsets.only(bottom: 12.0),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFF5A623),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFF5A623),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
+                                        style: const TextStyle(
+                                          height: 1.4,
+                                          fontSize: 12,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  dist['date'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // ================= TOMBOL LIHAT BUKTI (MODAL) =================
+                            if (hasImage) ...[
+                              const SizedBox(height: 10),
+                              InkWell(
+                                onTap: () =>
+                                    _showImageDialog(context, docImageUrl),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3D9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFF5A623,
+                                      ).withOpacity(0.4),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Penerima: ${dist['beneficiary_name']}\nCatatan: ${dist['notes']}',
-                                    style: const TextStyle(
-                                      height: 1.3,
-                                      fontSize: 12,
-                                    ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.image_outlined,
+                                        size: 16,
+                                        color: Color(0xFFF5A623),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Lihat Bukti Penyaluran',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFF5A623),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                            Text(
-                              dist['date'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       );
                     },
                   ),
-
-            const SizedBox(height: 20),
-          ],
+            const SizedBox(height: 24),],
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -528,6 +667,70 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // Helper untuk menampilkan Pop-up Modal Gambar Bukti Penyaluran
+  void _showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.grey,
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black54,
+                    radius: 16,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: const Text(
+                'Bukti Dokumentasi Penyaluran',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
