@@ -3,6 +3,10 @@ import '../network/api_client.dart';
 import '../utils/formatter.dart';
 import 'payment_web_view_screen.dart';
 import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final int campaignId;
@@ -438,16 +442,18 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                     'Belum ada riwayat distribusi dana.',
                     style: TextStyle(color: Colors.grey),
                   )
-                : ListView.builder(
+                : // ================= RIWAYAT PENYALURAN DANA =================
+                  ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: distributions.length,
                     itemBuilder: (context, index) {
                       final dist = distributions[index];
-                      final String? docImageUrl =
-                          dist['documentation_image_url'];
-                      final bool hasImage =
-                          docImageUrl != null && docImageUrl.isNotEmpty;
+
+                      // 1. Ambil URL PDF dari key baru
+                      final String? reportPdfUrl = dist['report_file_url'];
+                      final bool hasPdf =
+                          reportPdfUrl != null && reportPdfUrl.isNotEmpty;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12.0),
@@ -469,7 +475,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Disalurkan: ${CurrencyFormatter.toRupiah(_safeParse(dist['amount_distributed']))}',
+                                        'Disalurkan: Rp ${NumberFormat('#,###', 'id_ID').format(dist['amount_distributed'] ?? 0)}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFFF5A623),
@@ -499,12 +505,14 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                               ],
                             ),
 
-                            // ================= TOMBOL LIHAT BUKTI (MODAL) =================
-                            if (hasImage) ...[
+                            // 2. Tombol Trigger Modal Pop-up PDF Preview
+                            if (hasPdf) ...[
                               const SizedBox(height: 10),
                               InkWell(
-                                onTap: () =>
-                                    _showImageDialog(context, docImageUrl),
+                                onTap: () => _showPdfPreviewDialog(
+                                  context,
+                                  reportPdfUrl,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -512,29 +520,29 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF3D9),
+                                    color: const Color(0xFFFFEBEE),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: const Color(
-                                        0xFFF5A623,
-                                      ).withOpacity(0.4),
+                                        0xFFE53935,
+                                      ).withOpacity(0.3),
                                     ),
                                   ),
                                   child: const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        Icons.image_outlined,
+                                        Icons.picture_as_pdf_rounded,
                                         size: 16,
-                                        color: Color(0xFFF5A623),
+                                        color: Color(0xFFE53935),
                                       ),
                                       SizedBox(width: 6),
                                       Text(
-                                        'Lihat Bukti Penyaluran',
+                                        'Lihat Dokumen RAB (PDF)',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFFF5A623),
+                                          color: Color(0xFFE53935),
                                         ),
                                       ),
                                     ],
@@ -547,7 +555,8 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                       );
                     },
                   ),
-            const SizedBox(height: 24),],
+            const SizedBox(height: 24),
+          ],
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -670,65 +679,120 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     );
   }
 
-  // Helper untuk menampilkan Pop-up Modal Gambar Bukti Penyaluran
-  void _showImageDialog(BuildContext context, String imageUrl) {
+  // Helper dialog untuk preview dokumen PDF tanpa perlu download manual
+  void _showPdfPreviewDialog(BuildContext context, String pdfUrl) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.broken_image_rounded,
-                        color: Colors.grey,
-                        size: 40,
-                      ),
-                    ),
-                  ),
+        child: Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height * 0.8,
+          color: Colors.white,
+          child: Column(
+            children: [
+              // Header Pop-up
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: CircleAvatar(
-                    backgroundColor: Colors.black54,
-                    radius: 16,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
+                color: const Color(0xFFE53935),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Dokumen Laporan / RAB',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
                       icon: const Icon(
                         Icons.close,
                         color: Colors.white,
-                        size: 18,
+                        size: 20,
                       ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       onPressed: () => Navigator.pop(context),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              child: const Text(
-                'Bukti Dokumentasi Penyaluran',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Colors.black87,
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // Body PDF Preview (Streaming bytes dari API)
+              Expanded(
+                child: FutureBuilder<Uint8List>(
+                  future: () async {
+                    final dio = Dio();
+                    final response = await dio.get<List<int>>(
+                      pdfUrl,
+                      options: Options(responseType: ResponseType.bytes),
+                    );
+                    return Uint8List.fromList(response.data!);
+                  }(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: Color(0xFFE53935)),
+                            SizedBox(height: 12),
+                            Text(
+                              'Memuat dokumen PDF...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return Center(
+                        child: Text(
+                          'Gagal memuat dokumen: ${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return PdfPreview(
+                      build: (format) => snapshot.data!,
+                      allowPrinting: true,
+                      allowSharing: true,
+                      canChangeOrientation: false,
+                      canChangePageFormat: false,
+                      canDebug: false,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
