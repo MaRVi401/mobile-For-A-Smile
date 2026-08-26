@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../network/api_client.dart';
-import 'campaign_detail_screen.dart'; // Import halaman detail
+import 'campaign_detail_screen.dart';
 
 class CampaignScreen extends StatefulWidget {
   const CampaignScreen({super.key});
@@ -194,6 +194,22 @@ class _CampaignScreenState extends State<CampaignScreen> {
     // Ambil daftar 5 donatur terbaru dari response API
     final List<dynamic> recentDonors = campaign['recent_donors'] ?? [];
 
+    String? processedImageUrl = imageUrl;
+    if (processedImageUrl != null && processedImageUrl.isNotEmpty) {
+      if (processedImageUrl.contains('localhost')) {
+        processedImageUrl = processedImageUrl.replaceAll(
+          'localhost',
+          '10.0.2.2',
+        );
+      }
+    }
+
+    final bool isValidUrl =
+        processedImageUrl != null &&
+        processedImageUrl.trim().isNotEmpty &&
+        !processedImageUrl.endsWith('/storage/') &&
+        !processedImageUrl.endsWith('/null');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
@@ -236,27 +252,24 @@ class _CampaignScreenState extends State<CampaignScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: imageUrl != null && imageUrl.isNotEmpty
+                child: isValidUrl
                     ? Image.network(
-                        imageUrl,
+                        processedImageUrl!,
                         width: 90,
                         height: 90,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+                        errorBuilder: (context, error, stackTrace) => Image.asset(
+                          'assets/images/fas-logo.png', // <-- Fallback jika gagal muat dari network
                           width: 90,
                           height: 90,
-                          color: Colors.white24,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.white,
-                          ),
+                          fit: BoxFit.contain,
                         ),
                       )
-                    : Container(
+                    : Image.asset(
+                        'assets/images/fas-logo.png', // <-- Fallback jika URL di database null/kosong
                         width: 90,
                         height: 90,
-                        color: Colors.white24,
-                        child: const Icon(Icons.image, color: Colors.white),
+                        fit: BoxFit.contain,
                       ),
               ),
               const SizedBox(width: 12),
