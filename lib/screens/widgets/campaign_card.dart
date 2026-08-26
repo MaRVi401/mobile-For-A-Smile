@@ -14,6 +14,13 @@ class CampaignCard extends StatelessWidget {
     final String title = campaign['title'] ?? 'Tanpa Judul';
     String? imageUrl = campaign['image_url'];
 
+    // --- VALIDASI URL GAMBAR (TIDAK DIUBAH) ---
+    bool isValidUrl =
+        imageUrl != null &&
+        imageUrl.toString().trim().isNotEmpty &&
+        !imageUrl.toString().endsWith('/storage/') &&
+        !imageUrl.toString().endsWith('/null');
+
     // --- PENANGANAN DAN PERBAIKAN URL GAMBAR (TIDAK DIUBAH) ---
     if (imageUrl != null && imageUrl.isNotEmpty) {
       if (imageUrl.contains('localhost')) {
@@ -101,12 +108,13 @@ class CampaignCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- GAMBAR THUMBNAIL (TIDAK DIUBAH, HANYA UKURAN) ---
+              // --- GAMBAR THUMBNAIL ---
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: imageUrl != null && imageUrl.isNotEmpty
+                child:
+                    isValidUrl
                     ? Image.network(
-                        imageUrl,
+                        imageUrl!,
                         key: ValueKey(imageUrl),
                         width: 90,
                         height: 90,
