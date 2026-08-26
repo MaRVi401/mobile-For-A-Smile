@@ -475,7 +475,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Disalurkan: Rp ${NumberFormat('#,###', 'id_ID').format(dist['amount_distributed'] ?? 0)}',
+                                        'Disalurkan: Rp ${NumberFormat('#,###', 'id_ID').format(_safeParse(dist['amount_distributed']))}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFFF5A623),
